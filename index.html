@@ -1,0 +1,394 @@
+
+   
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="KHATAB Piano - a free online piano with built-in songs, sound choices and recording.">
+<title>KHATAB Piano</title>
+<style>
+:root{
+  --bg:#0f141b; --panel:#171e28; --line:#2a3442; --text:#e9edf2; --muted:#98a4b3;
+  --brass:#c8a45c; --brass-dark:#a98a46; --ink:#14181f;
+  --ivory:#fbf9f4; --edge:#b7bcc4; --white-down:#ecdcb0;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh; display:flex; flex-direction:column;
+  background:var(--bg); color:var(--text);
+  font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+
+/* Header */
+.top{
+  display:flex; flex-wrap:wrap; gap:12px 24px; align-items:center; justify-content:space-between;
+  padding:18px 28px; background:var(--panel); border-bottom:1px solid var(--line);
+}
+.brand{display:flex; align-items:baseline; gap:12px}
+.name{font-size:1.6rem; font-weight:800; letter-spacing:.14em}
+.product{font-size:1.6rem; font-weight:300; color:var(--brass)}
+.field{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:.9rem}
+
+/* Layout */
+main{flex:1; width:100%; max-width:1040px; margin:0 auto; padding:24px 20px; display:grid; gap:20px; align-content:start}
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:20px}
+@media (max-width:760px){ .grid{grid-template-columns:1fr} .top{padding:14px 18px} }
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px}
+h2{margin:0 0 14px; font-size:1.05rem; font-weight:650}
+.row{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin-top:12px}
+.row:first-of-type{margin-top:0}
+.label,label{color:var(--muted); font-size:.9rem}
+.status{margin:14px 0 0; min-height:1.5em; color:var(--muted); font-size:.9rem}
+.octave,output{min-width:2.5ch; color:var(--text); text-align:center; font-variant-numeric:tabular-nums}
+output{min-width:7ch; text-align:left; font-size:.9rem}
+
+/* Controls */
+button,select{
+  font:inherit; color:var(--text); background:#0f141b; border:1px solid var(--line);
+  border-radius:8px; height:38px; padding:0 14px; cursor:pointer;
+}
+select{padding:0 10px; min-width:170px}
+button:hover,select:hover{border-color:var(--brass)}
+button:disabled{opacity:.45; cursor:not-allowed; border-color:var(--line)}
+button.primary{background:var(--brass); border-color:var(--brass); color:var(--ink); font-weight:650}
+button.primary:hover{background:var(--brass-dark); border-color:var(--brass-dark)}
+button.active{border-color:#e5645c; color:#ff8f88}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--brass); outline-offset:2px}
+input[type=range]{accent-color:var(--brass); width:130px}
+.check{display:flex; align-items:center; gap:8px; cursor:pointer}
+input[type=checkbox]{accent-color:var(--brass); width:16px; height:16px}
+
+/* Piano */
+.scroller{overflow-x:auto; padding-bottom:4px}
+.piano{
+  min-width:600px; padding:16px 14px 12px; border-top:3px solid var(--brass);
+  border-radius:10px 10px 6px 6px; background:linear-gradient(#232b37,#12161c);
+  user-select:none; -webkit-user-select:none; touch-action:none;
+}
+.keys{position:relative; height:240px}
+.key{
+  position:absolute; top:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+  gap:2px; cursor:pointer; touch-action:none;
+}
+.key.white{
+  height:100%; background:var(--ivory); border:1px solid var(--edge);
+  border-radius:0 0 6px 6px; padding-bottom:12px; color:#4a5361; font-size:.75rem;
+}
+.key.white.down{background:var(--white-down)}
+.key.black{
+  height:62%; z-index:2; background:var(--ink); border:1px solid #000; border-radius:0 0 5px 5px;
+  padding-bottom:8px; color:#9aa5b4; font-size:.65rem; box-shadow:0 3px 4px rgba(0,0,0,.45);
+}
+.key.black.down{background:var(--brass-dark)}
+.key .note{font-weight:650}
+.key .hint{opacity:.65}
+.names-off .note,.names-off .hint{visibility:hidden}
+
+.help{margin:0; color:var(--muted); font-size:.88rem}
+kbd{font:inherit; font-size:.82rem; padding:1px 6px; border:1px solid var(--line); border-radius:4px}
+footer{padding:20px; text-align:center; color:var(--muted); font-size:.85rem; border-top:1px solid var(--line)}
+
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="name">KHATAB</span><span class="product">Piano</span></div>
+  <div class="field">
+    <label for="sound">Sound</label>
+    <select id="sound">
+      <option value="piano">Grand piano</option>
+      <option value="organ">Organ</option>
+      <option value="synth">Synth</option>
+    </select>
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+    <section class="panel" aria-labelledby="songs-title">
+      <h2 id="songs-title">Play a song</h2>
+      <div class="row">
+        <select id="song" aria-label="Choose a song"></select>
+        <button id="play" class="primary">Play</button>
+        <button id="stop">Stop</button>
+      </div>
+      <div class="row">
+        <label for="tempo">Tempo</label>
+        <input id="tempo" type="range" min="50" max="200" value="100">
+        <output id="tempoOut" for="tempo">100 BPM</output>
+      </div>
+      <p class="status" id="status" aria-live="polite">Choose a song and press Play.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="tools-title">
+      <h2 id="tools-title">Controls</h2>
+      <div class="row">
+        <span class="label">Octave</span>
+        <button id="down" aria-label="Octave down">&minus;</button>
+        <span class="octave" id="oct" aria-live="polite">4</span>
+        <button id="up" aria-label="Octave up">+</button>
+        <label for="vol">Volume</label>
+        <input id="vol" type="range" min="0" max="100" value="70">
+      </div>
+      <div class="row">
+        <button id="rec">Record</button>
+        <button id="replay" disabled>Play recording</button>
+        <label class="check"><input id="names" type="checkbox" checked> Note names</label>
+      </div>
+    </section>
+  </div>
+
+  <div class="scroller">
+    <div class="piano"><div class="keys" id="keys" role="group" aria-label="Piano keyboard"></div></div>
+  </div>
+
+  <p class="help">Click or tap the keys, or use your keyboard: <kbd>Z</kbd> to <kbd>M</kbd> plays the lower octave and <kbd>Q</kbd> to <kbd>I</kbd> the upper octave. The number keys are the black keys.</p>
+</main>
+
+<footer>&copy; 2026 KHATAB. All rights reserved.</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Songs ----------
+     Format: "NOTE:BEATS" separated by spaces. Use R for a rest.
+     To add a song, add an object to this list. */
+  var SONGS = [
+    { title: 'Twinkle, Twinkle, Little Star', bpm: 110,
+      notes: 'C4:1 C4:1 G4:1 G4:1 A4:1 A4:1 G4:2 F4:1 F4:1 E4:1 E4:1 D4:1 D4:1 C4:2 ' +
+             'G4:1 G4:1 F4:1 F4:1 E4:1 E4:1 D4:2 G4:1 G4:1 F4:1 F4:1 E4:1 E4:1 D4:2 ' +
+             'C4:1 C4:1 G4:1 G4:1 A4:1 A4:1 G4:2 F4:1 F4:1 E4:1 E4:1 D4:1 D4:1 C4:2' },
+    { title: 'Ode to Joy', bpm: 120,
+      notes: 'E4:1 E4:1 F4:1 G4:1 G4:1 F4:1 E4:1 D4:1 C4:1 C4:1 D4:1 E4:1 E4:1.5 D4:0.5 D4:2 ' +
+             'E4:1 E4:1 F4:1 G4:1 G4:1 F4:1 E4:1 D4:1 C4:1 C4:1 D4:1 E4:1 D4:1.5 C4:0.5 C4:2' },
+    { title: 'Happy Birthday', bpm: 110,
+      notes: 'G4:0.75 G4:0.25 A4:1 G4:1 C5:1 B4:2 G4:0.75 G4:0.25 A4:1 G4:1 D5:1 C5:2 ' +
+             'G4:0.75 G4:0.25 G5:1 E5:1 C5:1 B4:1 A4:1 F5:0.75 F5:0.25 E5:1 C5:1 D5:1 C5:2' },
+    { title: 'Jingle Bells (chorus)', bpm: 130,
+      notes: 'E4:1 E4:1 E4:2 E4:1 E4:1 E4:2 E4:1 G4:1 C4:1.5 D4:0.5 E4:4 ' +
+             'F4:1 F4:1 F4:1.5 F4:0.5 F4:1 E4:1 E4:1 E4:0.5 E4:0.5 E4:1 D4:1 D4:1 E4:1 D4:2 G4:2' },
+    { title: 'Fur Elise (opening)', bpm: 120,
+      notes: 'E5:0.5 D#5:0.5 E5:0.5 D#5:0.5 E5:0.5 B4:0.5 D5:0.5 C5:0.5 A4:1.5 R:0.5 ' +
+             'C4:0.5 E4:0.5 A4:0.5 B4:1.5 R:0.5 E4:0.5 G#4:0.5 B4:0.5 C5:1.5 R:0.5 ' +
+             'E4:0.5 E5:0.5 D#5:0.5 E5:0.5 D#5:0.5 E5:0.5 B4:0.5 D5:0.5 C5:0.5 A4:2' }
+  ];
+
+  /* ---------- Sounds ---------- */
+  var PRESETS = {
+    piano: { parts: [['triangle', 1, 1], ['sine', 2, 0.3]], attack: 0.006, peak: 0.9, decay: 0.5, sus: 0.28, tail: 0.08, rel: 0.35, bright: 8, sweep: true },
+    organ: { parts: [['sine', 1, 1], ['sine', 2, 0.5], ['sine', 3, 0.25]], attack: 0.02, peak: 0.6, decay: 0.05, sus: 0.55, tail: 0, rel: 0.12, bright: 10, sweep: false },
+    synth: { parts: [['sawtooth', 1, 0.5], ['sawtooth', 1.006, 0.5]], attack: 0.02, peak: 0.5, decay: 0.3, sus: 0.3, tail: 0, rel: 0.25, bright: 5, sweep: false }
+  };
+
+  var NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  var WHITE = [0, 2, 4, 5, 7, 9, 11];
+  var SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  var TOTAL = 25; // two octaves, C to C
+  var KEYMAP = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'KeyH', 'KeyN', 'KeyJ', 'KeyM',
+                'KeyQ', 'Digit2', 'KeyW', 'Digit3', 'KeyE', 'KeyR', 'Digit5', 'KeyT', 'Digit6', 'KeyY', 'Digit7', 'KeyU', 'KeyI'];
+  var HINT = ['Z', 'S', 'X', 'D', 'C', 'V', 'G', 'B', 'H', 'N', 'J', 'M', 'Q', '2', 'W', '3', 'E', 'R', '5', 'T', '6', 'Y', '7', 'U', 'I'];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var keysEl = $('keys'), statusEl = $('status');
+  var base = 4, ctx = null, master = null, volume = 0.7, sound = 'piano';
+  var els = [], voices = {}, timers = [];
+  var rec = { on: false, t0: 0, events: [] };
+
+  /* ---------- Build keyboard ---------- */
+  var whiteCount = 0, i;
+  for (i = 0; i < TOTAL; i++) if (WHITE.indexOf(i % 12) > -1) whiteCount++;
+  var w = 100 / whiteCount, bw = w * 0.62, wi = 0;
+
+  for (i = 0; i < TOTAL; i++) {
+    var isWhite = WHITE.indexOf(i % 12) > -1;
+    var k = document.createElement('div');
+    k.className = 'key ' + (isWhite ? 'white' : 'black');
+    k.dataset.i = i;
+    k.setAttribute('role', 'button');
+    if (isWhite) { k.style.left = (wi * w) + '%'; k.style.width = w + '%'; wi++; }
+    else { k.style.left = (wi * w - bw / 2) + '%'; k.style.width = bw + '%'; }
+    k.innerHTML = '<span class="note"></span><span class="hint">' + HINT[i] + '</span>';
+    keysEl.appendChild(k);
+    els.push(k);
+  }
+
+  function midiOf(i) { return 12 * (base + 1) + i; }
+  function nameOf(m) { return NAMES[m % 12] + (Math.floor(m / 12) - 1); }
+  function keyFor(m) { var j = m - 12 * (base + 1); return j >= 0 && j < TOTAL ? els[j] : null; }
+  function label() {
+    els.forEach(function (el, j) {
+      var n = nameOf(midiOf(j));
+      el.querySelector('.note').textContent = n;
+      el.setAttribute('aria-label', n);
+    });
+    $('oct').textContent = base;
+  }
+  function parse(n) {
+    var m = /^([A-G])(#?)(\d)$/.exec(n);
+    return 12 * (+m[3] + 1) + SEMI[m[1]] + (m[2] ? 1 : 0);
+  }
+
+  /* ---------- Audio ---------- */
+  function initAudio() {
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var comp = ctx.createDynamicsCompressor();
+    master = ctx.createGain();
+    master.gain.value = volume * 0.5;
+    master.connect(comp);
+    comp.connect(ctx.destination);
+  }
+
+  function noteOn(m, user) {
+    initAudio();
+    if (voices[m]) return;
+    if (user && rec.on) rec.events.push({ t: performance.now() - rec.t0, m: m, on: true });
+    var p = PRESETS[sound], t = ctx.currentTime, f = 440 * Math.pow(2, (m - 69) / 12);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(p.peak, t + p.attack);
+    g.gain.exponentialRampToValueAtTime(p.sus, t + p.attack + p.decay);
+    if (p.tail) g.gain.exponentialRampToValueAtTime(p.tail, t + 3);
+    var lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(Math.min(f * p.bright, 12000), t);
+    if (p.sweep) lp.frequency.exponentialRampToValueAtTime(Math.max(f * 2, 800), t + 1.5);
+    var oscs = p.parts.map(function (part) {
+      var o = ctx.createOscillator(), og = ctx.createGain();
+      o.type = part[0]; o.frequency.value = f * part[1]; og.gain.value = part[2];
+      o.connect(og); og.connect(g); o.start(t);
+      return o;
+    });
+    g.connect(lp); lp.connect(master);
+    voices[m] = { g: g, o: oscs, rel: p.rel };
+    var el = keyFor(m); if (el) el.classList.add('down');
+  }
+
+  function noteOff(m, user) {
+    var v = voices[m]; if (!v) return;
+    if (user && rec.on) rec.events.push({ t: performance.now() - rec.t0, m: m, on: false });
+    var t = ctx.currentTime;
+    v.g.gain.cancelScheduledValues(t);
+    v.g.gain.setValueAtTime(Math.max(v.g.gain.value, 0.0001), t);
+    v.g.gain.exponentialRampToValueAtTime(0.0001, t + v.rel);
+    v.o.forEach(function (o) { o.stop(t + v.rel + 0.05); });
+    delete voices[m];
+    var el = keyFor(m); if (el) el.classList.remove('down');
+  }
+
+  function releaseAll() { Object.keys(voices).forEach(function (m) { noteOff(+m, false); }); }
+
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+  function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+
+  /* ---------- Songs ---------- */
+  SONGS.forEach(function (s, n) {
+    var o = document.createElement('option');
+    o.value = n; o.textContent = s.title;
+    $('song').appendChild(o);
+  });
+  function current() { return SONGS[+$('song').value]; }
+  function setTempo(v) { $('tempo').value = v; $('tempoOut').textContent = v + ' BPM'; }
+  setTempo(SONGS[0].bpm);
+  $('song').onchange = function () { setTempo(current().bpm); stopAll(); statusEl.textContent = 'Press Play to hear ' + current().title + '.'; };
+  $('tempo').oninput = function (e) { setTempo(e.target.value); };
+
+  function stopAll() {
+    clearTimers(); releaseAll();
+    $('play').disabled = false;
+  }
+
+  function playSong() {
+    stopAll();
+    base = 4; label();
+    var s = current(), beat = 60000 / +$('tempo').value, at = 0;
+    s.notes.split(' ').forEach(function (tok) {
+      var parts = tok.split(':'), beats = parseFloat(parts[1]);
+      if (parts[0] !== 'R') {
+        var m = parse(parts[0]);
+        later(function () { noteOn(m, false); }, at);
+        later(function () { noteOff(m, false); }, at + beats * beat * 0.92);
+      }
+      at += beats * beat;
+    });
+    later(function () { statusEl.textContent = 'Finished: ' + s.title; $('play').disabled = false; }, at + 300);
+    statusEl.textContent = 'Playing: ' + s.title;
+    $('play').disabled = true;
+  }
+  $('play').onclick = playSong;
+  $('stop').onclick = function () { stopAll(); statusEl.textContent = 'Stopped.'; };
+
+  /* ---------- Recording ---------- */
+  $('rec').onclick = function () {
+    if (!rec.on) {
+      rec = { on: true, t0: performance.now(), events: [] };
+      $('rec').textContent = 'Stop recording'; $('rec').classList.add('active');
+      statusEl.textContent = 'Recording. Play something on the keys.';
+    } else {
+      rec.on = false;
+      $('rec').textContent = 'Record'; $('rec').classList.remove('active');
+      $('replay').disabled = rec.events.length === 0;
+      statusEl.textContent = rec.events.length ? 'Recording saved. Press Play recording.' : 'Nothing was recorded.';
+    }
+  };
+  $('replay').onclick = function () {
+    stopAll();
+    var last = 0;
+    rec.events.forEach(function (ev) {
+      last = Math.max(last, ev.t);
+      later(function () { ev.on ? noteOn(ev.m, false) : noteOff(ev.m, false); }, ev.t);
+    });
+    later(function () { releaseAll(); statusEl.textContent = 'Recording finished.'; }, last + 400);
+    statusEl.textContent = 'Playing your recording.';
+  };
+
+  /* ---------- Mouse and touch ---------- */
+  var held = {};
+  keysEl.addEventListener('pointerdown', function (e) {
+    var el = e.target.closest('.key'); if (!el) return;
+    try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
+    var m = midiOf(+el.dataset.i);
+    held[e.pointerId] = m; noteOn(m, true); e.preventDefault();
+  });
+  keysEl.addEventListener('pointerover', function (e) {
+    if (held[e.pointerId] === undefined) return;
+    var el = e.target.closest('.key'); if (!el) return;
+    var m = midiOf(+el.dataset.i);
+    if (m !== held[e.pointerId]) { noteOff(held[e.pointerId], true); held[e.pointerId] = m; noteOn(m, true); }
+  });
+  function release(e) {
+    if (held[e.pointerId] === undefined) return;
+    noteOff(held[e.pointerId], true); delete held[e.pointerId];
+  }
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
+
+  /* ---------- Computer keyboard ---------- */
+  window.addEventListener('keydown', function (e) {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.tagName === 'SELECT') return;
+    var n = KEYMAP.indexOf(e.code);
+    if (n > -1) { noteOn(midiOf(n), true); e.preventDefault(); }
+  });
+  window.addEventListener('keyup', function (e) {
+    var n = KEYMAP.indexOf(e.code);
+    if (n > -1) noteOff(midiOf(n), true);
+  });
+  window.addEventListener('blur', releaseAll);
+
+  /* ---------- Controls ---------- */
+  function shift(d) { releaseAll(); base = Math.max(1, Math.min(6, base + d)); label(); }
+  $('down').onclick = function () { shift(-1); };
+  $('up').onclick = function () { shift(1); };
+  $('vol').oninput = function (e) { volume = e.target.value / 100; if (master) master.gain.value = volume * 0.5; };
+  $('sound').onchange = function (e) { releaseAll(); sound = e.target.value; };
+  $('names').onchange = function (e) { keysEl.classList.toggle('names-off', !e.target.checked); };
+
+  label();
+})();
+</script>
+</body>
+</html>
